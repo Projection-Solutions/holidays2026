@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Department Holiday Schedule Grid (1 Nov – 3 Jan)</title>
+  <style>
+    :root {
+      --primary: #1e293b;
+      --border: #94a3b8;
+      --leave-bg: #ef4444;     /* Red for L */
+      --leave-text: #ffffff;
+      --telework-bg: #facc15;  /* Yellow for T */
+      --telework-text: #0f172a;
+      --onsite-bg: #22c55e;    /* Green for O */
+      --onsite-text: #ffffff;
+      --blackout-bg: #1e293b;  /* Blackout for Weekends & Holidays */
+      --blackout-text: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .app-container {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      color: var(--primary);
+    }
+
+    .subtitle {
+      font-size: 0.82rem;
+      color: #475569;
+      margin-top: 3px;
+    }
+
+    /* Controls & Legend Bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+    }
+
+    .add-user-form {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .add-user-form input {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    button {
+      padding: 7px 12px;
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: #1e3a8a; color: #fff; }
+    .btn-print { background: #0f766e; color: #fff; }
+    .btn-unlock { background: #334155; color: #fff; padding: 3px 7px; font-size: 0.72rem; }
+    .btn-active { background: #16a34a; color: #fff; padding: 3px 7px; font-size: 0.72rem; }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: bold;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    /* PIN Notification Banner */
+    #pinBanner {
+      display: none;
+      background: #dcfce7;
+      border: 2px solid #16a34a;
+      color: #14532d;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      font-size: 0.9rem;
+    }
+
+    .pin-box {
+      font-family: monospace;
+      font-size: 1.15rem;
+      font-weight: bold;
+      background: #fff;
+      padding: 2px 8px;
+      border: 1px solid #16a34a;
+      border-radius: 4px;
+      letter-spacing: 2px;
+    }
+
+    /* Scrollable Grid Wrapper */
+    .grid-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: max-content;
+      min-width: 100%;
+      font-size: 0.75rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      text-align: center;
+      padding: 0;
+      height: 28px;
+    }
+
+    /* Sticky Personnel Name Column */
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      background: #ffffff;
+      z-index: 2;
+      min-width: 180px;
+      max-width: 210px;
+      text-align: left;
+      padding: 4px 8px;
+      font-weight: 600;
+      border-right: 2px solid var(--primary);
+    }
+
+    th.sticky-col {
+      background: var(--primary);
+      color: #ffffff;
+      z-index: 3;
+    }
+
+    .emp-row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .month-header {
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 4px 0;
+      letter-spacing: 0.5px;
+    }
+
+    .dow-header {
+      background: #e2e8f0;
+      color: #334155;
+      font-size: 0.65rem;
+      font-weight: 700;
+      width: 26px;
+      min-width: 26px;
+    }
+
+    .day-header {
+      background: #f8fafc;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 0.72rem;
+      width: 26px;
+      min-width: 26px;
+    }
+
+    /* Blacked Out Cells (Weekends & Holidays) */
+    .blackout-header {
+      background: #0f172a !important;
+      color: #94a3b8 !important;
+    }
+
+    .cell-blackout {
+      background: var(--blackout-bg) !important;
+      color: var(--blackout-text);
+      font-size: 0.6rem;
+      user-select: none;
+    }
+
+    /* Past Date Lockout Styling */
+    .past-header {
+      opacity: 0.65;
+    }
+
+    .cell-past {
+      filter: brightness(0.92);
+      cursor: not-allowed;
+    }
+
+    /* Status Color Coding */
+    .status-L { background-color: var(--leave-bg) !important; color: var(--leave-text) !important; }
+    .status-T { background-color: var(--telework-bg) !important; color: var(--telework-text) !important; }
+    .status-O { background-color: var(--onsite-bg) !important; color: var(--onsite-text) !important; }
+
+    /* Grid Cell Select Dropdown */
+    .cell-select {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-align: center;
+      text-align-last: center;
+      cursor: pointer;
+      appearance: none;
+      -moz-appearance: none;
+      -webkit-appearance: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .cell-select:disabled {
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
+    .cell-select option {
+      background: #ffffff;
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    /* Summary Counter Columns */
+    .summary-col {
+      width: 28px;
+      min-width: 28px;
+      font-weight: 700;
+      background: #f8fafc;
+      font-size: 0.72rem;
+    }
+
+    /* LANDSCAPE PDF PRINT OPTIMIZATION */
+    @media print {
+      @page {
+        size: landscape;
+        margin: 0.25in;
+      }
+
+      body {
+        background: #ffffff;
+        padding: 0;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .app-container {
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .grid-wrapper {
+        overflow: visible !important;
+        border: none;
+      }
+
+      table {
+        width: 100% !important;
+        min-width: 100% !important;
+        table-layout: fixed;
+        font-size: 6pt !important;
+      }
+
+      th, td {
+        height: 16px !important;
+        border: 0.5pt solid #64748b !important;
+      }
+
+      .sticky-col {
+        position: static !important;
+        width: 110px !important;
+        min-width: 110px !important;
+        max-width: 110px !important;
+        font-size: 6.5pt !important;
+        padding: 1px 4px !important;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .dow-header, .day-header {
+        width: auto !important;
+        min-width: 0 !important;
+        font-size: 5.5pt !important;
+      }
+
+      .cell-select {
+        font-size: 6pt !important;
+      }
+
+      .summary-col {
+        width: 18px !important;
+        min-width: 18px !important;
+        font-size: 6pt !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <div>
+      <h1>Department Holiday Schedule (1 Nov – 3 Jan)</h1>
+      <div class="subtitle">Select Daily Status: <strong>L</strong> = Leave (Red) &bull; <strong>T</strong> = Telework (Yellow) &bull; <strong>O</strong> = Onsite (Green) &bull; Past Dates Auto-Lock</div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="swatch status-O">O</span> Onsite</div>
+      <div class="legend-item"><span class="swatch status-T">T</span> Telework</div>
+      <div class="legend-item"><span class="swatch status-L">L</span> Leave</div>
+      <div class="legend-item"><span class="swatch cell-blackout"></span> Weekend / Holiday</div>
+      <button class="btn-print no-print" onclick="window.print()">&#128424; Print Landscape PDF</button>
+    </div>
+  </header>
+
+  <!-- PIN Alert Banner -->
+  <div id="pinBanner" class="no-print"></div>
+
+  <!-- Add Personnel Control Bar -->
+  <div class="top-bar no-print">
+    <form class="add-user-form" onsubmit="addPersonnel(event)">
+      <label for="newEmpName" style="font-size:0.85rem; font-weight:600;">Add Personnel:</label>
+      <input type="text" id="newEmpName" placeholder="Last, First (e.g., Smith, J.)" required>
+      <button type="submit" class="btn-primary">+ Add Name &amp; Generate PIN</button>
+    </form>
+    <div style="font-size:0.78rem; color:#475569;">
+      &#128274; Click <strong>Unlock</strong> next to your name and enter your PIN to edit future dates. Dates prior to today (<span id="todayLabel"></span>) are locked.
+    </div>
+  </div>
+
+  <!-- Schedule Matrix -->
+  <div class="grid-wrapper">
+    <table id="scheduleGrid">
+      <thead id="gridHead"></thead>
+      <tbody id="gridBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // ============================================================================
+  // 1. DATE WINDOW & FEDERAL HOLIDAY CONFIGURATION (1 NOV – 3 JAN)
+  // ============================================================================
+  const START_DATE = new Date(2026, 10, 1); // Nov 1, 2026
+  const END_DATE   = new Date(2027, 0, 3);  // Jan 3, 2027
+
+  // Federal Holidays inside 1 Nov 2026 - 3 Jan 2027 window (YYYY-MM-DD)
+  const FEDERAL_HOLIDAYS = {
+    '2026-11-11': 'Veterans Day',
+    '2026-11-26': 'Thanksgiving Day',
+    '2026-12-25': 'Christmas Day',
+    '2027-01-01': 'New Year\'s Day'
+  };
+
+  const STORAGE_KEY = 'dept_holiday_grid_v2';
+  let unlockedEmployeeId = null; // Currently unlocked row ID in this session
+
+  // Normalize today's date to midnight for accurate past-date comparison
+  function getTodayMidnight() {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  function formatISO(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  // Build array of all day metadata between 1 Nov and 3 Jan
+  function buildCalendarDays() {
+    const days = [];
+    const today = getTodayMidnight();
+    const dowLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    let curr = new Date(START_DATE);
+    while (curr <= END_DATE) {
+      const iso = formatISO(curr);
+      const dow = curr.getDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const holidayName = FEDERAL_HOLIDAYS[iso] || null;
+      const isBlackout = isWeekend || Boolean(holidayName);
+      const isPast = curr < today;
+
+      days.push({
+        iso,
+        dayNum: curr.getDate(),
+        dowLetter: dowLetters[dow],
+        monthLabel: `${monthNames[curr.getMonth()]} ${curr.getFullYear()}`,
+        isBlackout,
+        holidayName,
+        isPast
+      });
+      curr.setDate(curr.getDate() + 1);
+    }
+    return days;
+  }
+
+  const CALENDAR_DAYS = buildCalendarDays();
+
+  // ============================================================================
+  // 2. STATE MANAGEMENT & PIN GENERATION
+  // ============================================================================
+  let employees = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
+  }
+
+  function generatePin() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let pin = '';
+    for (let i = 0; i < 6; i++) {
+      pin += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pin;
+  }
+
+  function addPersonnel(e) {
+    e.preventDefault();
+    const input = document.getElementById('newEmpName');
+    const name = input.value.trim();
+    if (!name) return;
+
+    const exists = employees.some(emp => emp.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      alert(`"${name}" is already on the schedule. Click "Unlock" next to their name and enter their PIN to make changes.`);
+      return;
+    }
+
+    const pin = generatePin();
+    const newEmp = {
+      id: 'EMP-' + Date.now(),
+      name: name,
+      pin: pin,
+      schedule: {} // Default workday status is 'O' (Onsite) unless changed
+    };
+
+    // Pre-populate workdays with default 'O' (Onsite)
+    CALENDAR_DAYS.forEach(d => {
+      if (!d.isBlackout) {
+        newEmp.schedule[d.iso] = 'O';
+      }
+    });
+
+    employees.push(newEmp);
+    unlockedEmployeeId = newEmp.id; // Auto-unlock newly added employee
+    saveState();
+
+    // Display generated PIN
+    const banner = document.getElementById('pinBanner');
+    banner.style.display = 'block';
+    banner.innerHTML = `
+      <strong>&#128274; Security PIN Assigned for ${escapeHtml(name)}:</strong>
+      <span class="pin-box">${pin}</span>
+      <span style="margin-left:10px; font-size:0.82rem;">
+        Save this PIN! Your row is now unlocked for editing. Other users cannot modify your row without this PIN.
+      </span>
+    `;
+
+    input.value = '';
+    renderBody();
+  }
+
+  function toggleRowLock(empId) {
+    if (unlockedEmployeeId === empId) {
+      unlockedEmployeeId = null;
+      renderBody();
+      return;
+    }
+
+    const emp = employees.find(x => x.id === empId);
+    if (!emp) return;
+
+    const entered = prompt(`Enter the 6-character Security PIN for ${emp.name} to unlock their schedule:`);
+    if (entered === null) return;
+
+    if (entered.trim().toUpperCase() === emp.pin) {
+      unlockedEmployeeId = emp.id;
+      renderBody();
+    } else {
+      alert('Incorrect PIN. You cannot modify another employee\'s schedule.');
+    }
+  }
+
+  function updateCellStatus(empId, dateIso, newStatus) {
+    const emp = employees.find(x => x.id === empId);
+    if (!emp) return;
+
+    // Double-check PIN unlock state and past-date lock
+    if (unlockedEmployeeId !== empId) {
+      alert('This row is locked. Unlock it with your PIN first.');
+      renderBody();
+      return;
+    }
+
+    const dayMeta = CALENDAR_DAYS.find(d => d.iso === dateIso);
+    if (!dayMeta || dayMeta.isPast || dayMeta.isBlackout) {
+      alert('Changes cannot be made after the day has passed or on blacked-out holidays/weekends.');
+      renderBody();
+      return;
+    }
+
+    emp.schedule[dateIso] = newStatus;
+    saveState();
+    renderBody();
+  }
+
+  // ============================================================================
+  // 3. RENDERING ENGINE
+  // ============================================================================
+  function renderHeader() {
+    const thead = document.getElementById('gridHead');
+
+    // Group days by Month for top header row
+    const monthGroups = [];
+    CALENDAR_DAYS.forEach(d => {
+      const last = monthGroups[monthGroups.length - 1];
+      if (!last || last.label !== d.monthLabel) {
+        monthGroups.push({ label: d.monthLabel, count: 1 });
+      } else {
+        last.count++;
+      }
+    });
+
+    const monthRowHtml = `
+      <tr>
+        <th class="sticky-col" rowspan="3">Personnel Name</th>
+        ${monthGroups.map(m => `<th class="month-header" colspan="${m.count}">${m.label}</th>`).join('')}
+        <th class="month-header" colspan="3">Totals</th>
+      </tr>
+    `;
+
+    const dowRowHtml = `
+      <tr>
+        ${CALENDAR_DAYS.map(d => {
+          const cls = d.isBlackout ? 'dow-header blackout-header' : 'dow-header';
+          const title = d.holidayName ? `Holiday: ${d.holidayName}` : (d.isBlackout ? 'Weekend' : d.iso);
+          return `<th class="${cls}" title="${title}">${d.dowLetter}</th>`;
+        }).join('')}
+        <th class="dow-header status-O" title="Total Onsite Days">O</th>
+        <th class="dow-header status-T" title="Total Telework Days">T</th>
+        <th class="dow-header status-L" title="Total Leave Days">L</th>
+      </tr>
+    `;
+
+    const dayNumRowHtml = `
+      <tr>
+        ${CALENDAR_DAYS.map(d => {
+          let cls = 'day-header';
+          if (d.isBlackout) cls += ' blackout-header';
+          if (d.isPast) cls += ' past-header';
+          const title = d.holidayName ? `${d.iso} (${d.holidayName})` : d.iso;
+          return `<th class="${cls}" title="${title}">${d.dayNum}</th>`;
+        }).join('')}
+        <th class="day-header" style="font-size:0.65rem;">On</th>
+        <th class="day-header" style="font-size:0.65rem;">TW</th>
+        <th class="day-header" style="font-size:0.65rem;">Lv</th>
+      </tr>
+    `;
+
+    thead.innerHTML = monthRowHtml + dowRowHtml + dayNumRowHtml;
+  }
+
+  function renderBody() {
+    const tbody = document.getElementById('gridBody');
+
+    if (employees.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="${CALENDAR_DAYS.length + 4}" style="padding:24px; color:#64748b; font-style:italic;">
+            No personnel added yet. Enter your name above to generate your unique PIN and populate your schedule.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = employees.map(emp => {
+      const isRowUnlocked = (unlockedEmployeeId === emp.id);
+      let countO = 0, countT = 0, countL = 0;
+
+      const dayCellsHtml = CALENDAR_DAYS.map(d => {
+        if (d.isBlackout) {
+          const label = d.holidayName ? 'H' : '';
+          const tip = d.holidayName ? `Federal Holiday: ${d.holidayName}` : 'Weekend (Blacked Out)';
+          return `<td class="cell-blackout" title="${tip}">${label}</td>`;
+        }
+
+        const val = emp.schedule[d.iso] || 'O';
+        if (val === 'O') countO++;
+        else if (val === 'T') countT++;
+        else if (val === 'L') countL++;
+
+        const canEdit = isRowUnlocked && !d.isPast;
+        const pastClass = d.isPast ? 'cell-past' : '';
+        const tooltip = d.isPast
+          ? `${d.iso}: Past date (Locked)`
+          : (isRowUnlocked ? `${d.iso}: Select O, T, or L` : `${d.iso}: Unlock row with PIN to edit`);
+
+        return `
+          <td class="status-${val} ${pastClass}" title="${tooltip}">
+            <select class="cell-select"
+              ${canEdit ? '' : 'disabled'}
+              onchange="updateCellStatus('${emp.id}', '${d.iso}', this.value)">
+              <option value="O" ${val === 'O' ? 'selected' : ''}>O</option>
+              <option value="T" ${val === 'T' ? 'selected' : ''}>T</option>
+              <option value="L" ${val === 'L' ? 'selected' : ''}>L</option>
+            </select>
+          </td>
+        `;
+      }).join('');
+
+      const lockBtnHtml = isRowUnlocked
+        ? `<button class="btn-active no-print" onclick="toggleRowLock('${emp.id}')" title="Click to Lock Row">&#128275; Editing</button>`
+        : `<button class="btn-unlock no-print" onclick="toggleRowLock('${emp.id}')" title="Enter PIN to Edit Row">&#128274; Unlock</button>`;
+
+      return `
+        <tr>
+          <td class="sticky-col">
+            <div class="emp-row-header">
+              <span>${escapeHtml(emp.name)}</span>
+              ${lockBtnHtml}
+            </div>
+          </td>
+          ${dayCellsHtml}
+          <td class="summary-col">${countO}</td>
+          <td class="summary-col">${countT}</td>
+          <td class="summary-col">${countL}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, s => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[s]));
+  }
+
+  // Initialize display
+  document.getElementById('todayLabel').textContent = formatISO(getTodayMidnight());
+  renderHeader();
+  renderBody();
+</script>
+
+</body>
+</html>
